@@ -106,8 +106,14 @@ services:
       - app
       - frontend
     environment:
-      - PHP_FPM_SERVER=api
+      - NGINX_FPM_SERVICE=${NGINX_FPM_SERVICE:-os2display}
       - NGINX_FPM_UPLOAD_MAX=${NGINX_FPM_UPLOAD_MAX}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - os2display
     labels:
@@ -119,10 +125,10 @@ services:
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       - "traefik.http.routers.apios2display.rule=Host(`${COMPOSE_SERVER_DOMAIN}`)"
       - "traefik.http.routers.apios2display.entrypoints=websecure"
-      # Redirect root / request to /${COMPOSE_ADMIN_CLIENT_PATH}
+      # Redirect root / request to /admin
       - "traefik.http.routers.apios2display.middlewares=redirect-to-admin"
       - "traefik.http.middlewares.redirect-to-admin.redirectregex.regex=^https:\\/\\/([^\\/]+)\\/?$$"
-      - "traefik.http.middlewares.redirect-to-admin.redirectregex.replacement=https://$$1${COMPOSE_ADMIN_CLIENT_PATH}"
+      - "traefik.http.middlewares.redirect-to-admin.redirectregex.replacement=https://$$1$/admin"
       # - "traefik.http.routers.apios2display.middlewares=apios2display"
       # - "traefik.http.middlewares.apios2display.ipwhitelist.sourcerange=212.10.60.163, 10.225.0.0/16"
       # - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=ITKBasicAuth@file"
@@ -132,5 +138,11 @@ services:
   redis:
     image: 'redis:6'
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - app

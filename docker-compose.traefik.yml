@@ -14,6 +14,12 @@ services:
       - "80:80"
       - "443:443"
       - "8080:8080" # Dashboard
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes:
       - $PWD/traefik/ssl:/certs:ro
       - $PWD/traefik/traefik.yml:/traefik.yml:ro
@@ -27,6 +33,12 @@ services:
     user: root
     container_name: socket-proxy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:2375/version || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:

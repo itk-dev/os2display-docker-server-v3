@@ -7,8 +7,6 @@ tasks:
     cmds:
       - task --list
 
-
-
   compose:
     desc: Run docker compose with -f flags from COMPOSE_FILES in .env
     cmds:
@@ -26,6 +24,11 @@ tasks:
         unset IFS
         docker compose $FILE_ARGS {{.CLI_ARGS}}
 
+  console:
+    desc: Run the console
+    cmds:
+      - task compose -- exec os2display bin/console {{.CLI_ARGS}}
+
   install:
     desc: Install the project
     cmds:
@@ -39,18 +42,15 @@ tasks:
           echo "External network 'frontend' already exists"
         fi
       - task compose -- pull
-      - task compose -- up --force-recreate --detach --remove-orphans
-#      - echo "Waiting for database to be ready"
-#      - sleep 20
-      - echo "Initialize the database"
-      - task compose -- exec os2display bin/console doctrine:schema:create
+      - task compose -- up --detach --remove-orphans
+      - task console -- doctrine:migrations:migrate
       - echo "Create jwt key pair"
-      - task compose -- exec os2display bin/console lexik:jwt:generate-keypair --skip-if-exists
-#      - task tenant:add
+      - task console -- lexik:jwt:generate-keypair --skip-if-exists
+      - task console -- app:update
+#      -  task console tenant:add
 #      - echo "CREATE AN ADMIN USER. CHOOSE THE TENANT YOU JUST CREATED."
 #      - task user:add
-#      - task template:load
-      - task _install:show-urls
+#      - task _install:show-urls
 
   purge:
     desc: Remove all containers and volumes
@@ -77,9 +77,9 @@ tasks:
         FILENAME=$DB_BACKUP_DIR/db_backup_$TIMESTAMP.sql
         echo "Performing database backup..."
         mkdir -p $DB_BACKUP_DIR  # Ensure the backup directory exists
-        DB_USER=$(grep ^MARIADB_USER= .env.docker.local | cut -d '=' -f 2)
-        DB_NAME=$(grep ^MARIADB_DATABASE= .env.docker.local | cut -d '=' -f 2)
-        DB_PASSWORD=$(grep ^MARIADB_PASSWORD= .env.docker.local | cut -d '=' -f 2)
+        DB_USER=$(grep ^MARIADB_USER= .env | cut -d '=' -f 2)
+        DB_NAME=$(grep ^MARIADB_DATABASE= .env | cut -d '=' -f 2)
+        DB_PASSWORD=$(grep ^MARIADB_PASSWORD= .env | cut -d '=' -f 2)
         echo "Using database user: $DB_USER and database name: $DB_NAME"
         task compose -- exec mariadb mysqldump -u $DB_USER -p$DB_PASSWORD $DB_NAME > $FILENAME
         if [ $? -eq 0 ]; then
@@ -89,7 +89,7 @@ tasks:
   _install:show-urls:
     cmds:
       - |
-        DOMAIN=$(grep ^COMPOSE_SERVER_DOMAIN= .env.docker.local | cut -d '=' -f 2)
+        DOMAIN=$(grep ^COMPOSE_SERVER_DOMAIN= .env | cut -d '=' -f 2)
         echo ""
         echo "===================================================="
         echo "OS2display now is available via the URLs below"
@@ -139,21 +139,3 @@ tasks:
 
         echo ""
         echo "$OUTPUT has been created."
-
-  _env:check:
-    desc: Check that the .env files exist
-    cmds:
-      - |
-        if [ ! -f .env.example ]; then
-          echo "Error: .env.example not found. The repository may be incomplete."
-          exit 1
-        fi
-        echo "Copying .env.example to .env.local..."
-        cp .env.example .env.local
-      - |
-        if [ ! -f .env.docker.local ]; then
-          echo "Error: .env.docker.local not found."
-          echo "Create it by running: cp .env.docker.example .env.docker.local"
-          echo "Then edit it with your local settings before running this task again."
-          exit 1
-        fi
