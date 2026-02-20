@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-  - Add new task backup_db to backup the default internal mariadb
+  - Rename tasks to Symfony-style colon-separated naming: `cc` → `cache:clear`, `tenant_add` → `tenant:add`, `user_add` → `user:add`, `load_templates` → `template:load`, `backup_db` → `db:backup`. Old names kept as aliases for backward compatibility.
+  - Add new task `db:backup` to backup the default internal mariadb
 
 ## v1.1.2
 
