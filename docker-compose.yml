@@ -109,7 +109,7 @@ services:
       - PHP_FPM_SERVER=api
       - NGINX_FPM_UPLOAD_MAX=${NGINX_FPM_UPLOAD_MAX}
     depends_on:
-      - api
+      - os2display
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=frontend"

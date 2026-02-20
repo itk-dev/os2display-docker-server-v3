@@ -7,6 +7,25 @@ tasks:
     cmds:
       - task --list
 
+
+
+  compose:
+    desc: Run docker compose with -f flags from COMPOSE_FILES in .env
+    cmds:
+      - |
+        COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
+        if [ -z "$COMPOSE_FILES" ]; then
+          echo "Error: COMPOSE_FILES is not set in .env"
+          exit 1
+        fi
+        FILE_ARGS=""
+        IFS=','
+        for FILE in $COMPOSE_FILES; do
+          FILE_ARGS="$FILE_ARGS -f $FILE"
+        done
+        unset IFS
+        docker compose $FILE_ARGS {{.CLI_ARGS}}
+
   install:
     desc: Install the project
     cmds:
@@ -19,14 +38,14 @@ tasks:
         else
           echo "External network 'frontend' already exists"
         fi
-      - docker compose pull
-      - docker compose up --force-recreate --detach --remove-orphans
+      - task compose -- pull
+      - task compose -- up --force-recreate --detach --remove-orphans
 #      - echo "Waiting for database to be ready"
 #      - sleep 20
       - echo "Initialize the database"
-      - docker compose exec api bin/console doctrine:schema:create
+      - task compose -- exec os2display bin/console doctrine:schema:create
       - echo "Create jwt key pair"
-      - docker compose exec api bin/console lexik:jwt:generate-keypair --skip-if-exists
+      - task compose -- exec os2display bin/console lexik:jwt:generate-keypair --skip-if-exists
 #      - task tenant:add
 #      - echo "CREATE AN ADMIN USER. CHOOSE THE TENANT YOU JUST CREATED."
 #      - task user:add
@@ -36,7 +55,7 @@ tasks:
   purge:
     desc: Remove all containers and volumes
     cmds:
-      - docker compose down --volumes --remove-orphans
+      - task compose -- down --volumes --remove-orphans
       - |
         # Check if the external network 'frontend' exists, remove if it does
         if docker network ls --format '{{.Name}}' | grep -wq frontend; then
@@ -62,7 +81,7 @@ tasks:
         DB_NAME=$(grep ^MARIADB_DATABASE= .env.docker.local | cut -d '=' -f 2)
         DB_PASSWORD=$(grep ^MARIADB_PASSWORD= .env.docker.local | cut -d '=' -f 2)
         echo "Using database user: $DB_USER and database name: $DB_NAME"
-        docker compose --env-file .env.local --env-file .env.docker.local -f docker-compose.yml exec mariadb mysqldump -u $DB_USER -p$DB_PASSWORD $DB_NAME > $FILENAME
+        task compose -- exec mariadb mysqldump -u $DB_USER -p$DB_PASSWORD $DB_NAME > $FILENAME
         if [ $? -eq 0 ]; then
           echo "Database backup saved to $FILENAME"
         fi
@@ -86,7 +105,8 @@ tasks:
         INPUT=".env.example"
         OUTPUT=".env"
         CACHE=$(mktemp)
-        trap "rm -f $CACHE" EXIT
+        SEDSCRIPT=$(mktemp)
+        trap "rm -f $CACHE $SEDSCRIPT" EXIT
 
         if [ ! -f "$INPUT" ]; then
           echo "Error: $INPUT not found."
@@ -108,20 +128,14 @@ tasks:
           done
         done < "$INPUT"
 
-        # Second pass: replace placeholders with values
-        rm -f "$OUTPUT"
-        while IFS= read -r line || [ -n "$line" ]; do
-          RESULT="$line"
-          while echo "$RESULT" | grep -qE '<[^:]+:-[^>]*>'; do
-            MATCH=$(echo "$RESULT" | grep -oE '<[^:]+:-[^>]*>' | head -1)
-            VAR_NAME=$(echo "$MATCH" | sed 's/^<\([^:]*\):-.*>/\1/')
-            VALUE=$(grep "^${VAR_NAME}=" "$CACHE" | cut -d '=' -f 2-)
-            ESCAPED_MATCH=$(printf '%s\n' "$MATCH" | sed 's/[[\.*^$()+?{|\/]/\\&/g')
-            ESCAPED_VALUE=$(printf '%s\n' "$VALUE" | sed 's/[&\/]/\\&/g')
-            RESULT=$(printf '%s\n' "$RESULT" | sed "s|${ESCAPED_MATCH}|${ESCAPED_VALUE}|")
-          done
-          printf '%s\n' "$RESULT" >> "$OUTPUT"
-        done < "$INPUT"
+        # Build sed script from collected values
+        while IFS='=' read -r VAR_NAME VALUE; do
+          ESCAPED_VALUE=$(printf '%s\n' "$VALUE" | sed 's/[&\\|]/\\&/g')
+          printf 's|<%s:-[^>]*>|%s|g\n' "$VAR_NAME" "$ESCAPED_VALUE" >> "$SEDSCRIPT"
+        done < "$CACHE"
+
+        # Single sed pass to replace all placeholders
+        sed -f "$SEDSCRIPT" "$INPUT" > "$OUTPUT"
 
         echo ""
         echo "$OUTPUT has been created."
