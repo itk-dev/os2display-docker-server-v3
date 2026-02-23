@@ -43,13 +43,14 @@ tasks:
         fi
       - task compose -- pull
       - task compose -- up --detach --remove-orphans
-      - task console -- doctrine:migrations:migrate
+#      - task console -- doctrine:migrations:migrate
       - echo "Create jwt key pair"
       - task console -- lexik:jwt:generate-keypair --skip-if-exists
       - task console -- app:update
-#      -  task console tenant:add
-#      - echo "CREATE AN ADMIN USER. CHOOSE THE TENANT YOU JUST CREATED."
-#      - task user:add
+#      - task console -- app:update
+      - task console -- app:tenant:add
+      - task console -- app:user:add
+      - task console -- cache:clear
 #      - task _install:show-urls
 
   purge:

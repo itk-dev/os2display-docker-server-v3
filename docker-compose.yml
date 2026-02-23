@@ -97,7 +97,7 @@ services:
       - CLIENT_DEBUG=${CLIENT_DEBUG:-false}
     volumes:
       - ./jwt:/var/www/html/config/jwt:rw
-      - ./media:/var/www/html/public/media:rw
+      - ./media:/app/public/media:rw
 
   nginx:
     image: ghcr.io/itk-dev/os2display-api-service-nginx:${COMPOSE_IMAGE_VERSION}
@@ -137,7 +137,7 @@ services:
       # - "traefik.http.middlewares.os2display.ipwhitelist.sourcerange=212.10.60.163, 10.225.0.0/16"
       # - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=ITKBasicAuth@file"
     volumes:
-      - ./media:/var/www/html/public/media:rw
+      - ./media:/app/public/media:rw
 
   redis:
     image: 'redis:6'
