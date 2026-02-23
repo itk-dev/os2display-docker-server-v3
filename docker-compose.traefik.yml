@@ -5,8 +5,7 @@ networks:
 
 services:
   traefik:
-    image: traefik:latest
-    container_name: traefik
+    image: traefik:v3.6
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -31,7 +30,6 @@ services:
   socket-proxy:
     image: itkdev/docker-socket-proxy
     user: root
-    container_name: socket-proxy
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:2375/version || exit 1"]
