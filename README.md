@@ -1,6 +1,6 @@
-# OS2display v2 Hosting and Deployment
+# OS2display v3 Hosting and Deployment
 
-This is a deployment tool designed for hosting the OS2display v2 application using Docker. It provides a Docker-based setup, pre-configured files, and task automation to simplify the deployment and management of the application.
+This is a deployment tool designed for hosting the OS2display v3 application using Docker. It provides a Docker-based setup, pre-configured files, and task automation to simplify the deployment and management of the application.
 
 ## Prerequisites
 
@@ -40,73 +40,78 @@ This project can only run in secure mode using HTTPS (port 443). You must provid
 
 1. Use a fully qualified domain name (FQDN) that resolves to your server's IP address.
 2. Place the certificate file (`docker.crt`) and private key file (`docker.key`) in the `traefik/ssl` directory.
-3. Set the domain name in `.env.docker.local` via the `COMPOSE_SERVER_DOMAIN` variable.
+3. Set the domain name in `.env` via the `COMPOSE_SERVER_DOMAIN` variable.
 
 ## Configuration
 
-Before running `task install`, copy and edit the configuration file:
+Before running `task install`, generate the configuration file using one of these methods:
+
+**Option A** — Interactive prompt (recommended):
 
 ```bash
-cp .env.docker.example .env.docker.local
+task _env:build
 ```
 
-Edit `.env.docker.local` with your local settings. The key variables are described below.
+This reads `.env.example`, prompts for each placeholder value, and writes `.env`.
 
-### Domain and Versions
+**Option B** — Manual copy and edit:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your local settings. The key variables are described below.
+
+### Domain and Version
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `COMPOSE_SERVER_DOMAIN` | Domain name where the server will be accessible | `demo.os2display.dk` |
-| `COMPOSE_VERSION_API` | Version of `itkdev/os2display-api-service` | `2.6.0` |
-| `COMPOSE_VERSION_ADMIN` | Version of `itkdev/os2display-admin-client` | `2.6.0` |
-| `COMPOSE_VERSION_CLIENT` | Version of `itkdev/os2display-client` | `2.3.0` |
+| `COMPOSE_SERVER_DOMAIN` | Domain name where the server will be accessible | `os2display.local.itkdev.dk` |
+| `COMPOSE_IMAGE_VERSION` | Version of the os2display Docker images (applies to all services) | `latest` |
 
 ### Infrastructure Options
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `INTERNAL_DATABASE` | Set to `true` to use the built-in MariaDB, `false` for an external database | `true` |
-| `INTERNAL_PROXY` | Set to `true` to use the built-in Traefik proxy, `false` for an external proxy | `true` |
+Which infrastructure services to include is controlled by the `COMPOSE_FILES` variable in `.env`. It is a comma-separated list of Docker Compose files to load.
+
+| Value | Purpose |
+|-------|---------|
+| `docker-compose.yml` | **Required.** Core services (os2display API, nginx, redis) |
+| `docker-compose.mariadb.yml` | Built-in MariaDB database. Omit if using an external database |
+| `docker-compose.traefik.yml` | Built-in Traefik reverse proxy. Omit if using an external proxy |
+
+Default: `docker-compose.yml,docker-compose.mariadb.yml`
 
 ### Database
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_DATABASE_URL` | Doctrine database connection URL | `mysql://db:db@mariadb:3306/db?serverVersion=mariadb-10.11.11` |
-| `MARIADB_USER` | MariaDB user (only when `INTERNAL_DATABASE=true`) | `db` |
-| `MARIADB_PASSWORD` | MariaDB password (only when `INTERNAL_DATABASE=true`) | `db` |
-| `MARIADB_ROOT_PASSWORD` | MariaDB root password (only when `INTERNAL_DATABASE=true`) | `dbrootpassword` |
-| `MARIADB_DATABASE` | MariaDB database name (only when `INTERNAL_DATABASE=true`) | `db` |
+| `APP_DATABASE_URL` | Doctrine database connection URL | `mysql://db:db@mariadb:3306/db?serverVersion=mariadb-10.5.13` |
+| `MARIADB_USER` | MariaDB user (only when using built-in MariaDB) | `db` |
+| `MARIADB_PASSWORD` | MariaDB password (only when using built-in MariaDB) | `db` |
+| `MARIADB_ROOT_PASSWORD` | MariaDB root password (only when using built-in MariaDB) | `dbrootpassword` |
+| `MARIADB_DATABASE` | MariaDB database name (only when using built-in MariaDB) | `db` |
 
 ### Secrets
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_SECRET` | Symfony application secret | `pleasuchangethis` |
-| `APP_JWT_PASSPHRASE` | JWT key pair passphrase | `pleasechangethistoo` |
+| `APP_SECRET` | Symfony application secret | `CHANGE_ME` |
+| `APP_JWT_PASSPHRASE` | JWT key pair passphrase | `CHANGE_ME` |
 
 **NOTE:** Change both `APP_SECRET` and `APP_JWT_PASSPHRASE` to secure values before running in production.
-
-### Templates and Screen Layouts
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TASK_VERSION_TEMPLATES` | Version/branch of [os2display/display-templates](https://github.com/os2display/display-templates/releases) | `2.6.0` |
-| `TASK_TEMPLATES` | Comma-separated list of templates to load | See `.env.docker.example` |
-| `TASK_SCREEN_LAYOUTS` | Comma-separated list of screen layouts to load | See `.env.docker.example` |
 
 ### OIDC (OpenID Connect)
 
 | Variable | Description |
 |----------|-------------|
-| `INTERNAL_OIDC_METADATA_URL` | OIDC metadata URL provided by the IdP |
-| `INTERNAL_OIDC_CLIENT_ID` | OIDC client ID |
-| `INTERNAL_OIDC_CLIENT_SECRET` | OIDC client secret |
-| `INTERNAL_OIDC_REDIRECT_URI` | OIDC redirect URI |
+| `APP_INTERNAL_OIDC_METADATA_URL` | OIDC metadata URL provided by the IdP |
+| `APP_INTERNAL_OIDC_CLIENT_ID` | OIDC client ID |
+| `APP_INTERNAL_OIDC_CLIENT_SECRET` | OIDC client secret |
+| `APP_INTERNAL_OIDC_REDIRECT_URI` | OIDC redirect URI |
 
 ## Installation
 
-1. Edit `.env.docker.local` with your domain name, secure passwords, and other settings.
+1. Generate or edit `.env` with your domain name, secure passwords, and other settings.
 2. Place your SSL certificate files (`docker.crt` and `docker.key`) in the `traefik/ssl` directory.
 3. Run the install task:
 
@@ -117,10 +122,9 @@ task install
 The install process will:
 - Pull Docker images
 - Start all containers
-- Create the database schema
 - Generate JWT key pair
+- Run database migrations
 - Prompt you to create a tenant and an admin user
-- Load templates and screen layouts
 
 After installation, the application is available at:
 - **Admin:** `https://<COMPOSE_SERVER_DOMAIN>/admin`
@@ -134,50 +138,42 @@ For a full list of tasks, run:
 task --list
 ```
 
-### Installation and Setup
-
 | Task | Description |
 |------|-------------|
-| `task install` | Install the project (pull images, create DB, generate JWT keys, add tenant/user, load templates) |
-| `task reinstall` | Reinstall from scratch. **WARNING:** Deletes the database |
-| `task up` | Start the environment (recompiles configuration) |
-| `task down` | Stop and remove all containers |
-| `task stop` | Stop all containers without removing them |
-| `task purge` | Remove all containers and volumes. **WARNING:** Deletes the database |
-
-### Tenant and User Management
-
-| Task | Description |
-|------|-------------|
-| `task tenant:add` | Add a new tenant group |
-| `task user:add` | Add a new user (editor or admin) to a tenant |
-
-### Templates and Screen Layouts
-
-| Task | Description |
-|------|-------------|
-| `task template:load` | Load templates and screen layouts based on configuration in `.env.docker.local` |
-
-### Maintenance
-
-| Task | Description |
-|------|-------------|
-| `task logs` | Follow logs from the Docker containers |
-| `task cache:clear` | Clear the application cache |
+| `task install` | Install the project (pull images, start containers, generate JWT keys, add tenant/user) |
+| `task purge` | Remove all containers. Use `-- --volumes` to also delete volumes, `-- --network` to remove the frontend network |
 | `task db:backup` | Perform a database dump (only when using the built-in MariaDB). Saves to the `db_backups/` directory |
+| `task compose -- <args>` | Run `docker compose` with the correct `-f` flags derived from `COMPOSE_FILES` in `.env` |
+| `task console -- <cmd>` | Run a Symfony console command inside the os2display container |
+
+### Common compose commands via task
+
+```bash
+task compose -- up --detach       # Start all containers
+task compose -- down              # Stop and remove containers
+task compose -- logs -f           # Follow container logs
+task compose -- ps                # List running containers
+```
+
+### Common console commands via task
+
+```bash
+task console -- cache:clear       # Clear Symfony cache
+task console -- app:tenant:add    # Add a new tenant
+task console -- app:user:add      # Add a new user
+```
 
 ## Updating an Existing Installation
 
 To update to newer image versions:
 
-1. Update the version variables (`COMPOSE_VERSION_API`, `COMPOSE_VERSION_ADMIN`, `COMPOSE_VERSION_CLIENT`) in `.env.docker.local`.
-2. Run the restart script:
+1. Update `COMPOSE_IMAGE_VERSION` in `.env`.
+2. Pull and recreate containers:
 
 ```bash
-./restart.sh
+task compose -- pull
+task compose -- up --detach --remove-orphans
 ```
-
-This pulls new images, recreates containers, and runs database migrations. If templates have changed, run `task template:load` afterwards.
 
 ## License
 

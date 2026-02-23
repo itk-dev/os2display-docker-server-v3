@@ -8,7 +8,7 @@ tasks:
       - task --list
 
   compose:
-    desc: Run docker compose with -f flags from COMPOSE_FILES in .env
+    desc: Run docker compose with -f flags from COMPOSE_FILES in .env. Example{{":"}} task compose -- up --detach
     cmds:
       - |
         COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
@@ -25,7 +25,7 @@ tasks:
         docker compose $FILE_ARGS {{.CLI_ARGS}}
 
   console:
-    desc: Run the console
+    desc: Run Symfony bin/console in the os2display container. Example{{":"}} task console -- cache{{":"}}clear
     cmds:
       - task compose -- exec os2display bin/console {{.CLI_ARGS}}
 
@@ -43,7 +43,6 @@ tasks:
         fi
       - task compose -- pull
       - task compose -- up --detach --remove-orphans
-#      - task console -- doctrine:migrations:migrate
       - echo "Create jwt key pair"
       - task console -- lexik:jwt:generate-keypair --skip-if-exists
       - task console -- app:update
@@ -51,21 +50,20 @@ tasks:
       - task console -- app:tenant:add
       - task console -- app:user:add
       - task console -- cache:clear
-#      - task _install:show-urls
 
   purge:
-    desc: Remove all containers and volumes
+    desc: Remove all containers (use -- --volumes to also delete volumes, -- --network to remove the frontend network)
     cmds:
-      - task compose -- down --volumes --remove-orphans
+      - task compose -- down --remove-orphans {{.CLI_ARGS}}
       - |
-        # Check if the external network 'frontend' exists, remove if it does
-        if docker network ls --format '{{.Name}}' | grep -wq frontend; then
-          echo "Removing external network 'frontend'"
-          docker network rm frontend
-        else
-          echo "External network 'frontend' does not exist"
+        if echo "{{.CLI_ARGS}}" | grep -q -- '--network'; then
+          if docker network ls --format '{{.Name}}' | grep -wq frontend; then
+            echo "Removing external network 'frontend'"
+            docker network rm frontend
+          else
+            echo "External network 'frontend' does not exist"
+          fi
         fi
-      - rm -f docker-compose.yml .env.local
 
   db:backup:
     desc: Perform a database dump, if you use the default internal mariadb. The dump file will be saved in the 'db_backups' directory with a timestamp in the filename.
@@ -87,19 +85,34 @@ tasks:
           echo "Database backup saved to $FILENAME"
         fi
 
-  _install:show-urls:
+  open:admin:
+    desc: Open the admin interface in the default browser
     cmds:
       - |
         DOMAIN=$(grep ^COMPOSE_SERVER_DOMAIN= .env | cut -d '=' -f 2)
-        echo ""
-        echo "===================================================="
-        echo "OS2display now is available via the URLs below"
-        echo "===================================================="
-        echo "Admin: https://$DOMAIN/admin"
-        echo "Screen: https://$DOMAIN/client"
-        echo "===================================================="
+        if [ -z "$DOMAIN" ]; then
+          echo "Error: COMPOSE_SERVER_DOMAIN is not set in .env"
+          exit 1
+        fi
+        URL="https://$DOMAIN/admin"
+        echo "Opening $URL"
+        xdg-open "$URL" 2>/dev/null || open "$URL" 2>/dev/null || echo "Could not open browser. Visit: $URL"
+
+  open:client:
+    desc: Open the client interface in the default browser
+    cmds:
+      - |
+        DOMAIN=$(grep ^COMPOSE_SERVER_DOMAIN= .env | cut -d '=' -f 2)
+        if [ -z "$DOMAIN" ]; then
+          echo "Error: COMPOSE_SERVER_DOMAIN is not set in .env"
+          exit 1
+        fi
+        URL="https://$DOMAIN/client"
+        echo "Opening $URL"
+        xdg-open "$URL" 2>/dev/null || open "$URL" 2>/dev/null || echo "Could not open browser. Visit: $URL"
 
   _env:build:
+    internal: true
     desc: Build .env from .env.example by prompting for placeholder values
     cmds:
       - |

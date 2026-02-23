@@ -5,7 +5,7 @@ networks:
 
 services:
   mariadb:
-    image: mariadb:10.11.11
+    image: mariadb:10.11.16
     restart: unless-stopped
     networks:
       - app
