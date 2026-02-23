@@ -105,11 +105,15 @@ services:
     networks:
       - app
       - frontend
+    ports:
+      - 8080
     environment:
       - NGINX_FPM_SERVICE=${NGINX_FPM_SERVICE:-os2display}
-      - NGINX_FPM_UPLOAD_MAX=${NGINX_FPM_UPLOAD_MAX}
+      - NGINX_FPM_PORT=${NGINX_FPM_PORT:-9000}
+      - NGINX_FPM_UPLOAD_MAX=${NGINX_FPM_UPLOAD_MAX:?}
+      - NGINX_SET_REAL_IP_FROM=${NGINX_SET_REAL_IP_FROM:-172.16.0.0/16}
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -119,18 +123,18 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=frontend"
-      - "traefik.http.routers.apios2display-http.rule=Host(`${COMPOSE_SERVER_DOMAIN}`)"
-      - "traefik.http.routers.apios2display-http.entrypoints=web"
-      - "traefik.http.routers.apios2display-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.os2display-http.rule=Host(`${COMPOSE_SERVER_DOMAIN}`)"
+      - "traefik.http.routers.os2display-http.entrypoints=web"
+      - "traefik.http.routers.os2display-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.apios2display.rule=Host(`${COMPOSE_SERVER_DOMAIN}`)"
-      - "traefik.http.routers.apios2display.entrypoints=websecure"
+      - "traefik.http.routers.os2display.rule=Host(`${COMPOSE_SERVER_DOMAIN}`)"
+      - "traefik.http.routers.os2display.entrypoints=websecure"
       # Redirect root / request to /admin
-      - "traefik.http.routers.apios2display.middlewares=redirect-to-admin"
+      - "traefik.http.routers.os2display.middlewares=redirect-to-admin"
       - "traefik.http.middlewares.redirect-to-admin.redirectregex.regex=^https:\\/\\/([^\\/]+)\\/?$$"
-      - "traefik.http.middlewares.redirect-to-admin.redirectregex.replacement=https://$$1$/admin"
-      # - "traefik.http.routers.apios2display.middlewares=apios2display"
-      # - "traefik.http.middlewares.apios2display.ipwhitelist.sourcerange=212.10.60.163, 10.225.0.0/16"
+      - "traefik.http.middlewares.redirect-to-admin.redirectregex.replacement=https://$$1/admin"
+      # - "traefik.http.routers.os2display.middlewares=os2display"
+      # - "traefik.http.middlewares.os2display.ipwhitelist.sourcerange=212.10.60.163, 10.225.0.0/16"
       # - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=ITKBasicAuth@file"
     volumes:
       - ./media:/var/www/html/public/media:rw
