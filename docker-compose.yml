@@ -105,8 +105,6 @@ services:
     networks:
       - app
       - frontend
-    ports:
-      - 8080
     environment:
       - NGINX_FPM_SERVICE=${NGINX_FPM_SERVICE:-os2display}
       - NGINX_FPM_PORT=${NGINX_FPM_PORT:-9000}
