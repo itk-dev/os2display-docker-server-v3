@@ -62,10 +62,11 @@ cp .env.example .env
 
 Edit `.env` with your local settings. The key variables are described below.
 
-### Domain and Version
+### Domain, Name and Version
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `COMPOSE_PROJECT_NAME` | Docker Compose project name (used for container prefixes) | `os2display` |
 | `COMPOSE_SERVER_DOMAIN` | Domain name where the server will be accessible | `os2display.local.itkdev.dk` |
 | `COMPOSE_IMAGE_VERSION` | Version of the os2display Docker images (applies to all services) | `latest` |
 
@@ -97,10 +98,13 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 |----------|-------------|---------|
 | `APP_SECRET` | Symfony application secret | `CHANGE_ME` |
 | `APP_JWT_PASSPHRASE` | JWT key pair passphrase | `CHANGE_ME` |
+| `APP_ADMIN_LOGIN_METHODS` | JSON array configuring admin login methods (required) | `[{"type":"username-password","enabled":true,...}]` |
 
 **NOTE:** Change both `APP_SECRET` and `APP_JWT_PASSPHRASE` to secure values before running in production.
 
 ### OIDC (OpenID Connect)
+
+**Internal provider** (admin login):
 
 | Variable | Description |
 |----------|-------------|
@@ -108,6 +112,15 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 | `APP_INTERNAL_OIDC_CLIENT_ID` | OIDC client ID |
 | `APP_INTERNAL_OIDC_CLIENT_SECRET` | OIDC client secret |
 | `APP_INTERNAL_OIDC_REDIRECT_URI` | OIDC redirect URI |
+
+**External provider** (screen/device login):
+
+| Variable | Description |
+|----------|-------------|
+| `APP_EXTERNAL_OIDC_METADATA_URL` | OIDC metadata URL provided by the IdP |
+| `APP_EXTERNAL_OIDC_CLIENT_ID` | OIDC client ID |
+| `APP_EXTERNAL_OIDC_CLIENT_SECRET` | OIDC client secret |
+| `APP_EXTERNAL_OIDC_REDIRECT_URI` | OIDC redirect URI |
 
 ## Installation
 
@@ -120,11 +133,13 @@ task install
 ```
 
 The install process will:
+- Create the external `frontend` Docker network (if it doesn't exist)
 - Pull Docker images
 - Start all containers
 - Generate JWT key pair
-- Run database migrations
+- Run `app:update` (database migrations and other setup tasks)
 - Prompt you to create a tenant and an admin user
+- Clear the Symfony cache
 
 After installation, the application is available at:
 - **Admin:** `https://<COMPOSE_SERVER_DOMAIN>/admin`
@@ -145,6 +160,8 @@ task --list
 | `task db:backup` | Perform a database dump (only when using the built-in MariaDB). Saves to the `db_backups/` directory |
 | `task compose -- <args>` | Run `docker compose` with the correct `-f` flags derived from `COMPOSE_FILES` in `.env` |
 | `task console -- <cmd>` | Run a Symfony console command inside the os2display container |
+| `task open:admin` | Open the admin interface in the default browser |
+| `task open:client` | Open the client interface in the default browser |
 
 ### Common compose commands via task
 
