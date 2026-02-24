@@ -42,11 +42,10 @@ tasks:
           echo "External network 'frontend' already exists"
         fi
       - task compose -- pull
-      - task compose -- up --detach --remove-orphans
+      - task compose -- up --detach --remove-orphans --wait
       - echo "Create jwt key pair"
       - task console -- lexik:jwt:generate-keypair --skip-if-exists
       - task console -- app:update
-#      - task console -- app:update
       - task console -- app:tenant:add
       - task console -- app:user:add
       - task console -- cache:clear

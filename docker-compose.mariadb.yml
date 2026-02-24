@@ -15,10 +15,10 @@ services:
       - MARIADB_PASSWORD=${MARIADB_PASSWORD}
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 30s
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized && mariadb -u\"$MARIADB_USER\" -p\"$MARIADB_PASSWORD\" \"$MARIADB_DATABASE\" -e 'SELECT 1'"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
       start_period: 30s
     volumes:
       - mariadb:/var/lib/mysql:rw
