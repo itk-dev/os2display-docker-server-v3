@@ -124,7 +124,7 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 
 ## Installation
 
-1. Generate or edit `.env` with your domain name, secure passwords, and other settings.
+1. Generate or edit `.env` with your chosen settings.
 2. Place your SSL certificate files (`docker.crt` and `docker.key`) in the `traefik/ssl` directory.
 3. Run the install task:
 
