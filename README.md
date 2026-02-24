@@ -104,7 +104,7 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 
 ### OIDC (OpenID Connect)
 
-**Internal provider** (admin login):
+**Internal provider**:
 
 | Variable | Description |
 |----------|-------------|
