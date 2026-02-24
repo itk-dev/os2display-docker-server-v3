@@ -113,7 +113,7 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 | `APP_INTERNAL_OIDC_CLIENT_SECRET` | OIDC client secret |
 | `APP_INTERNAL_OIDC_REDIRECT_URI` | OIDC redirect URI |
 
-**External provider** (screen/device login):
+**External provider**:
 
 | Variable | Description |
 |----------|-------------|
