@@ -11,6 +11,8 @@ services:
     restart: unless-stopped
     networks:
       - app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       # PHP config values
       - PHP_MAX_EXECUTION_TIME=${PHP_MAX_EXECUTION_TIME}
