@@ -194,4 +194,4 @@ task compose -- up --detach --remove-orphans
 
 ## License
 
-This project is licensed under the European Union Public License 1.2. See [LICENSE](LICENSE) for details.
+This project is licensed under the Mozilla Public License Version 2.0. See [LICENSE](LICENSE) for details.
