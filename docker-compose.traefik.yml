@@ -7,6 +7,9 @@ services:
   traefik:
     image: traefik:v3.6
     restart: unless-stopped
+    networks:
+      - frontend
+      - proxy
     security_opt:
       - no-new-privileges:true
     ports:
@@ -23,14 +26,13 @@ services:
       - $PWD/traefik/ssl:/certs:ro
       - $PWD/traefik/traefik.yml:/traefik.yml:ro
       - $PWD/traefik/dynamic-conf.yaml:/config/dynamic-conf.yaml:ro
-    networks:
-      - frontend
-      - proxy
 
   socket-proxy:
     image: itkdev/docker-socket-proxy
     user: root
     restart: unless-stopped
+    networks:
+      - proxy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:2375/version || exit 1"]
       interval: 30s
@@ -41,5 +43,3 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       CONTAINERS: 1
-    networks:
-      - proxy
