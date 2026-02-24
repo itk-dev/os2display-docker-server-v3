@@ -104,7 +104,7 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 
 ### OIDC (OpenID Connect)
 
-**Internal provider** (admin login):
+**Internal provider**:
 
 | Variable | Description |
 |----------|-------------|
@@ -113,7 +113,7 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 | `APP_INTERNAL_OIDC_CLIENT_SECRET` | OIDC client secret |
 | `APP_INTERNAL_OIDC_REDIRECT_URI` | OIDC redirect URI |
 
-**External provider** (screen/device login):
+**External provider**:
 
 | Variable | Description |
 |----------|-------------|
@@ -124,7 +124,7 @@ Default: `docker-compose.yml,docker-compose.mariadb.yml`
 
 ## Installation
 
-1. Generate or edit `.env` with your domain name, secure passwords, and other settings.
+1. Generate or edit `.env` with your chosen settings.
 2. Place your SSL certificate files (`docker.crt` and `docker.key`) in the `traefik/ssl` directory.
 3. Run the install task:
 
@@ -194,4 +194,4 @@ task compose -- up --detach --remove-orphans
 
 ## License
 
-This project is licensed under the European Union Public License 1.2. See [LICENSE](LICENSE) for details.
+This project is licensed under the Mozilla Public License Version 2.0. See [LICENSE](LICENSE) for details.
