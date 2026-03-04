@@ -110,8 +110,7 @@ tasks:
         echo "Opening $URL"
         xdg-open "$URL" 2>/dev/null || open "$URL" 2>/dev/null || echo "Could not open browser. Visit: $URL"
 
-  _env:build:
-    internal: true
+  env:build:
     desc: Build .env from .env.example by prompting for placeholder values
     cmds:
       - |
