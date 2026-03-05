@@ -44,6 +44,12 @@ tasks:
         else
           echo "External network 'frontend' already exists"
         fi
+      - |
+        # Create .env if it doesn't exist
+        if [ ! -f .env ]; then
+          echo "Configuration file not found, creating .env from .env.example by prompting for placeholder values"
+          task _env:build
+        fi
       - task compose -- pull
       - task compose -- up --detach --remove-orphans --wait
       - echo "Create jwt key pair"
@@ -113,7 +119,8 @@ tasks:
         echo "Opening $URL"
         xdg-open "$URL" 2>/dev/null || open "$URL" 2>/dev/null || echo "Could not open browser. Visit: $URL"
 
-  env:build:
+  _env:build:
+    internal: true
     desc: Build .env from .env.example by prompting for placeholder values
     cmds:
       - |

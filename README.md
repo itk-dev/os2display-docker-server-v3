@@ -49,7 +49,7 @@ Before running `task install`, generate the configuration file using one of thes
 **Option A** — Interactive prompt (recommended):
 
 ```bash
-task env:build
+task _env:build
 ```
 
 This reads `.env.example`, prompts for each placeholder value, and writes `.env`.
@@ -80,17 +80,17 @@ Which infrastructure services to include is controlled by the `COMPOSE_FILES` va
 | `docker-compose.mariadb.yml` | Built-in MariaDB database. Omit if using an external database |
 | `docker-compose.traefik.yml` | Built-in Traefik reverse proxy. Omit if using an external proxy |
 
-Default: `docker-compose.yml,docker-compose.mariadb.yml`
+Default: `docker-compose.yml,docker-compose.mariadb.yml,docker-compose.traefik.yml`
 
 ### Database
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_DATABASE_URL` | Doctrine database connection URL | `mysql://db:db@mariadb:3306/db?serverVersion=mariadb-10.5.13` |
-| `MARIADB_USER` | MariaDB user (only when using built-in MariaDB) | `db` |
-| `MARIADB_PASSWORD` | MariaDB password (only when using built-in MariaDB) | `db` |
-| `MARIADB_ROOT_PASSWORD` | MariaDB root password (only when using built-in MariaDB) | `dbrootpassword` |
-| `MARIADB_DATABASE` | MariaDB database name (only when using built-in MariaDB) | `db` |
+| `APP_DATABASE_URL` | Doctrine database connection URL | `mysql://os2display:CHANGE_ME@mariadb:3306/os2display?serverVersion=mariadb-10.5.13` |
+| `MARIADB_USER` | MariaDB user (only when using built-in MariaDB) | `os2display` |
+| `MARIADB_PASSWORD` | MariaDB password (only when using built-in MariaDB) | `CHANGE_ME` |
+| `MARIADB_ROOT_PASSWORD` | MariaDB root password (only when using built-in MariaDB) | `CHANGE_ME` |
+| `MARIADB_DATABASE` | MariaDB database name (only when using built-in MariaDB) | `os2display` |
 
 ### Secrets
 
