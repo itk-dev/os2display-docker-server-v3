@@ -49,7 +49,7 @@ Before running `task install`, generate the configuration file using one of thes
 **Option A** — Interactive prompt (recommended):
 
 ```bash
-task _env:build
+task env:build
 ```
 
 This reads `.env.example`, prompts for each placeholder value, and writes `.env`.
