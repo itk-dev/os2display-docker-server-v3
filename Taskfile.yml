@@ -76,7 +76,7 @@ tasks:
           fi
         fi
       - echo "Installing"
-      #- task compose -- pull
+      - task compose -- pull
       - task compose -- up --detach --remove-orphans --wait
       - echo "Create jwt key pair"
       - task console -- lexik:jwt:generate-keypair --skip-if-exists
@@ -230,19 +230,13 @@ tasks:
     desc: Upgrade OS2Display - remove containers, pull new images, start containers, and run app:update
     cmds:
       - echo "Stopping and removing containers..."
-      - task: compose
-        vars:
-          CLI_ARGS: down
+      - task compose -- down
       - echo "Pulling new image versions..."
-      - task: compose
-        vars:
-          CLI_ARGS: pull
+      - task compose -- pull
       - echo "Starting containers..."
-      - task: compose
-        vars:
-          CLI_ARGS: up -d
+      - task compose -- up -d
       - echo "Running application update..."
-      - task: console
-        vars:
-          CLI_ARGS: app:update
+      - task console -- app:update
+      - echo "Clearing cache..."
+      - task console -- cache:clear
       - echo "Upgrade complete!"
