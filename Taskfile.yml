@@ -58,24 +58,7 @@ tasks:
           echo "Configuration file (.env) already exists"
         fi
       - task: check:version
-      - |
-        # Check if Traefik is enabled and SSL certificates exist
-        COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
-        if echo "$COMPOSE_FILES" | grep -q "docker-compose.traefik.yml"; then
-          echo "You have choosen an internal Traefik setup. Checking for SSL certificates..."
-          if [ ! -f traefik/ssl/docker.crt ] || [ ! -f traefik/ssl/docker.key ]; then
-            echo ""
-            echo "⚠️  ERROR: Traefik SSL certificates not found!"
-            echo "   The COMPOSE_FILES variable includes docker-compose.traefik.yml,"
-            echo "   but the required SSL certificate files are missing:"
-            echo "   - traefik/ssl/docker.crt"
-            echo "   - traefik/ssl/docker.key"
-            echo ""
-            echo "Please create these files and then re-run install."
-            echo ""
-            exit 1
-          fi
-        fi
+      - task: check:certificates
       - echo "Installing"
       - task compose -- pull
       - task compose -- up --detach --remove-orphans --wait
@@ -254,35 +237,58 @@ tasks:
       - task console -- cache:clear
       - echo "Upgrade complete!"
 
-check:version:
-  desc: Check if installer version matches OS2Display version
-  internal: true
-  cmds:
-    - |
-      # Check if installer version matches OS2Display version
-      if [ -f VERSION ]; then
-        INSTALLER_VERSION=$(cat VERSION)
-        IMAGE_VERSION=$(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2 | tr -d ' "')
-        
-        # Extract major.minor version (e.g., 3.0 from 3.0.0-beta1)
-        INSTALLER_MAIN=$(echo "$INSTALLER_VERSION" | cut -d '.' -f 1-2)
-        IMAGE_MAIN=$(echo "$IMAGE_VERSION" | cut -d '.' -f 1-2)
-        
-        if [ "$INSTALLER_MAIN" != "$IMAGE_MAIN" ]; then
-          echo ""
-          echo "⚠️  WARNING: Version mismatch detected!"
-          echo "   Installer version: $INSTALLER_VERSION"
-          echo "   OS2Display version: $IMAGE_VERSION"
-          echo ""
-          echo "   The .env.example file may not be compatible with the OS2Display"
-          echo "   version you are installing. We encourage you to download the"
-          echo "   installer version that matches your OS2Display version."
-          echo ""
-          printf "Do you want to continue anyway? (yes/no): "
-          read CONFIRM
-          if [ "$CONFIRM" != "yes" ]; then
-            echo "Operation cancelled."
+  check:version:
+    desc: Check if installer version matches OS2Display version
+    internal: true
+    cmds:
+      - |
+        # Check if installer version matches OS2Display version
+        if [ -f VERSION ]; then
+          INSTALLER_VERSION=$(cat VERSION)
+          IMAGE_VERSION=$(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2 | tr -d ' "')
+          
+          # Extract major.minor version (e.g., 3.0 from 3.0.0-beta1)
+          INSTALLER_MAIN=$(echo "$INSTALLER_VERSION" | cut -d '.' -f 1-2)
+          IMAGE_MAIN=$(echo "$IMAGE_VERSION" | cut -d '.' -f 1-2)
+          
+          if [ "$INSTALLER_MAIN" != "$IMAGE_MAIN" ]; then
+            echo ""
+            echo "⚠️  WARNING: Version mismatch detected!"
+            echo "   Installer version: $INSTALLER_VERSION"
+            echo "   OS2Display version: $IMAGE_VERSION"
+            echo ""
+            echo "   The .env.example file may not be compatible with the OS2Display"
+            echo "   version you are installing. We encourage you to download the"
+            echo "   installer version that matches your OS2Display version."
+            echo ""
+            printf "Do you want to continue anyway? (yes/no): "
+            read CONFIRM
+            if [ "$CONFIRM" != "yes" ]; then
+              echo "Operation cancelled."
+              exit 1
+            fi
+          fi
+        fi
+
+  check:certificates:
+    desc: Check if Traefik SSL certificates exist when Traefik is enabled
+    internal: true
+    cmds:
+      - |
+        # Check if Traefik is enabled and SSL certificates exist
+        COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
+        if echo "$COMPOSE_FILES" | grep -q "docker-compose.traefik.yml"; then
+          echo "You have choosen an internal Traefik setup. Checking for SSL certificates..."
+          if [ ! -f traefik/ssl/docker.crt ] || [ ! -f traefik/ssl/docker.key ]; then
+            echo ""
+            echo "⚠️  ERROR: Traefik SSL certificates not found!"
+            echo "   The COMPOSE_FILES variable includes docker-compose.traefik.yml,"
+            echo "   but the required SSL certificate files are missing:"
+            echo "   - traefik/ssl/docker.crt"
+            echo "   - traefik/ssl/docker.key"
+            echo ""
+            echo "Please create these files and then re-run install."
+            echo ""
             exit 1
           fi
         fi
-      fi
