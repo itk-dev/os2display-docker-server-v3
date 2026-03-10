@@ -59,7 +59,7 @@ tasks:
         fi
       - task: check:version
       - task: check:certificates
-      - echo "Installing"
+      - echo "Installing version $(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2) of OS2Display"
       - task compose -- pull
       - task compose -- up --detach --remove-orphans --wait
       - echo "Create jwt key pair"
@@ -227,6 +227,7 @@ tasks:
       - task: check:version
       - echo "Stopping and removing containers..."
       - task compose -- down
+      - echo "Upgrading to version $(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2)..."
       - echo "Pulling new image versions..."
       - task compose -- pull
       - echo "Starting containers..."
@@ -269,6 +270,8 @@ tasks:
             fi
           fi
         fi
+
+
 
   check:certificates:
     desc: Check if Traefik SSL certificates exist when Traefik is enabled
