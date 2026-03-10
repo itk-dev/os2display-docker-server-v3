@@ -84,6 +84,16 @@ tasks:
       - task console -- app:tenant:add
       - task console -- app:user:add
       - task console -- cache:clear
+      - echo "Upgrade complete!"
+      - |
+        DOMAIN=$(grep ^COMPOSE_SERVER_DOMAIN= .env | cut -d '=' -f 2)
+        echo ""
+        echo "===================================================="
+        echo "OS2display is now available via the URLs below"
+        echo "===================================================="
+        echo "Admin: https://$DOMAIN/admin"
+        echo "Screen: https://$DOMAIN/client"
+        echo "===================================================="
 
   uninstall:
     desc: Uninstall OS2Display. Removes the database, all containers and volumes and the network. And the .env file. Use with caution!
