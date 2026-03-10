@@ -25,6 +25,8 @@ tasks:
           FILE_ARGS="$FILE_ARGS -f $FILE"
         done
         unset IFS
+        
+        echo "Running: docker compose$FILE_ARGS {{.CLI_ARGS}}"
         docker compose $FILE_ARGS {{.CLI_ARGS}}
 
   console:
@@ -33,11 +35,13 @@ tasks:
       - task compose -- exec os2display bin/console {{.CLI_ARGS}}
 
   install:
-    desc: Install the project
+    desc: Install OS2Display. 
     cmds:
-      - echo "Installing"
+      - echo "Welcome! Thank you for choosing OS2Display."
+      - echo ""
       - |
         # Check if the external network 'frontend' exists, create if not
+        echo "Checking external network 'frontend'"
         if ! docker network ls --format '{{.Name}}' | grep -wq frontend; then
           echo "Creating external network 'frontend'"
           docker network create frontend
@@ -46,11 +50,33 @@ tasks:
         fi
       - |
         # Create .env if it doesn't exist
+        echo "Checking for configuration file (.env)"
         if [ ! -f .env ]; then
           echo "Configuration file not found, creating .env from .env.example by prompting for placeholder values"
-          task _env:build
+          task env:build
+        else
+          echo "Configuration file (.env) already exists"
         fi
-      - task compose -- pull
+      - |
+        # Check if Traefik is enabled and SSL certificates exist
+        COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
+        if echo "$COMPOSE_FILES" | grep -q "docker-compose.traefik.yml"; then
+          echo "You have choosen an internal Traefik setup. Checking for SSL certificates..."
+          if [ ! -f traefik/ssl/docker.crt ] || [ ! -f traefik/ssl/docker.key ]; then
+            echo ""
+            echo "⚠️  ERROR: Traefik SSL certificates not found!"
+            echo "   The COMPOSE_FILES variable includes docker-compose.traefik.yml,"
+            echo "   but the required SSL certificate files are missing:"
+            echo "   - traefik/ssl/docker.crt"
+            echo "   - traefik/ssl/docker.key"
+            echo ""
+            echo "Please create these files and then re-run install."
+            echo ""
+            exit 1
+          fi
+        fi
+      - echo "Installing"
+      #- task compose -- pull
       - task compose -- up --detach --remove-orphans --wait
       - echo "Create jwt key pair"
       - task console -- lexik:jwt:generate-keypair --skip-if-exists
@@ -59,11 +85,50 @@ tasks:
       - task console -- app:user:add
       - task console -- cache:clear
 
+  uninstall:
+    desc: Uninstall OS2Display. Removes the database, all containers and volumes and the network. And the .env file. Use with caution!
+    cmds:
+      - |
+        echo "⚠️  WARNING: This will permanently remove:"
+        echo "   - All Docker containers"
+        echo "   - All Docker volumes (including the database)"
+        echo "   - The 'frontend' Docker network"
+        echo "   - The .env configuration file"
+        echo ""
+        echo "This action cannot be undone!"
+        echo ""
+        printf "Are you sure you want to continue? (yes/no): "
+        read CONFIRM
+        if [ "$CONFIRM" != "yes" ]; then
+          echo "Uninstall cancelled."
+          exit 1
+        fi
+      - task purge -- --volumes --network
+      - |
+        if [ -f .env ]; then
+          echo "Removing .env file"
+          rm .env
+        else
+          echo ".env file does not exist"
+        fi
+
   purge:
     desc: Remove all containers (use -- --volumes to also delete volumes, -- --network to remove the frontend network)
     cmds:
-      - task compose -- down --remove-orphans {{.CLI_ARGS}}
       - |
+        # Filter out --network flag before passing to docker compose
+        COMPOSE_ARGS=""
+        REMOVE_NETWORK=false
+        for arg in {{.CLI_ARGS}}; do
+          if [ "$arg" = "--network" ]; then
+            REMOVE_NETWORK=true
+          else
+            COMPOSE_ARGS="$COMPOSE_ARGS $arg"
+          fi
+        done
+        task compose -- down --remove-orphans $COMPOSE_ARGS
+      - |
+        # Check if --network flag was provided
         if echo "{{.CLI_ARGS}}" | grep -q -- '--network'; then
           if docker network ls --format '{{.Name}}' | grep -wq frontend; then
             echo "Removing external network 'frontend'"
@@ -160,3 +225,24 @@ tasks:
 
         echo ""
         echo "$OUTPUT has been created."
+
+  upgrade:
+    desc: Upgrade OS2Display - remove containers, pull new images, start containers, and run app:update
+    cmds:
+      - echo "Stopping and removing containers..."
+      - task: compose
+        vars:
+          CLI_ARGS: down
+      - echo "Pulling new image versions..."
+      - task: compose
+        vars:
+          CLI_ARGS: pull
+      - echo "Starting containers..."
+      - task: compose
+        vars:
+          CLI_ARGS: up -d
+      - echo "Running application update..."
+      - task: console
+        vars:
+          CLI_ARGS: app:update
+      - echo "Upgrade complete!"
