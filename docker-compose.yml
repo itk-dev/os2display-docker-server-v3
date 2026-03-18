@@ -98,7 +98,7 @@ services:
       - CLIENT_COLOR_SCHEME=${CLIENT_COLOR_SCHEME:-{"type":"library","lat":56.0,"lng":10.0}}
       - CLIENT_DEBUG=${CLIENT_DEBUG:-false}
     volumes:
-      - ./jwt:/var/www/html/config/jwt:rw
+      - ./jwt:/app/config/jwt:rw
       - ./media:/app/public/media:rw
 
   nginx:
