@@ -67,6 +67,7 @@ tasks:
       - task console -- app:update
       - task console -- app:tenant:add
       - task console -- app:user:add
+      - sleep 5
       - task console -- cache:clear
       - echo "Install complete!"
       - |
