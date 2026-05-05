@@ -7,7 +7,7 @@ networks:
 
 services:
   os2display:
-    image: ghcr.io/os2display/os2display-api-service:${COMPOSE_IMAGE_VERSION}
+    image: ghcr.io/os2display/display-api-service:${COMPOSE_IMAGE_VERSION}
     restart: unless-stopped
     networks:
       - app
@@ -102,7 +102,7 @@ services:
       - ./media:/app/public/media:rw
 
   nginx:
-    image: ghcr.io/os2display/os2display-api-service-nginx:${COMPOSE_IMAGE_VERSION}
+    image: ghcr.io/os2display/display-api-service-nginx:${COMPOSE_IMAGE_VERSION}
     restart: unless-stopped
     networks:
       - app
