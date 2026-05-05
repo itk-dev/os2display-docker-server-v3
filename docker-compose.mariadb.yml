@@ -1,0 +1,27 @@
+networks:
+  app:
+    driver: bridge
+    internal: false
+
+services:
+  mariadb:
+    image: mariadb:10.11.16
+    restart: unless-stopped
+    networks:
+      - app
+    environment:
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized && mariadb -u\"$MARIADB_USER\" -p\"$MARIADB_PASSWORD\" \"$MARIADB_DATABASE\" -e 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - mariadb:/var/lib/mysql:rw
+ 
+volumes:
+    mariadb:
