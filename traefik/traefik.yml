@@ -4,6 +4,9 @@ api:
   insecure: true
   debug: true
 
+ping:
+  entryPoint: "web"
+
 entryPoints:
   web:
     address: ":80"

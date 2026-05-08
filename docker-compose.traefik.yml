@@ -28,7 +28,7 @@ services:
       - $PWD/traefik/dynamic-conf.yaml:/config/dynamic-conf.yaml:ro
 
   socket-proxy:
-    image: itkdev/docker-socket-proxy
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
     user: root
     restart: unless-stopped
     networks:

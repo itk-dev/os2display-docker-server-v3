@@ -14,6 +14,9 @@ tasks:
         COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
         if [ -z "$COMPOSE_FILES" ]; then
           echo "Error: COMPOSE_FILES is not set in .env"
+          echo ""
+          echo "Check that the configuration file (.env) exists and is properly configured. Consult the README for more information."
+          echo ""
           exit 1
         fi
         FILE_ARGS=""
@@ -22,6 +25,8 @@ tasks:
           FILE_ARGS="$FILE_ARGS -f $FILE"
         done
         unset IFS
+        
+        echo "Running: docker compose$FILE_ARGS {{.CLI_ARGS}}"
         docker compose $FILE_ARGS {{.CLI_ARGS}}
 
   console:
@@ -30,17 +35,31 @@ tasks:
       - task compose -- exec os2display bin/console {{.CLI_ARGS}}
 
   install:
-    desc: Install the project
+    desc: Install OS2Display. 
     cmds:
-      - echo "Installing"
+      - echo "Welcome! Thank you for choosing OS2Display."
+      - echo ""
       - |
         # Check if the external network 'frontend' exists, create if not
+        echo "Checking external network 'frontend'"
         if ! docker network ls --format '{{.Name}}' | grep -wq frontend; then
           echo "Creating external network 'frontend'"
           docker network create frontend
         else
           echo "External network 'frontend' already exists"
         fi
+      - |
+        # Create .env if it doesn't exist
+        echo "Checking for configuration file (.env)"
+        if [ ! -f .env ]; then
+          echo "Configuration file not found, creating .env from .env.example by prompting for placeholder values"
+          task env:build
+        else
+          echo "Configuration file (.env) already exists"
+        fi
+      - task: check:version
+      - task: check:certificates
+      - echo "Installing version $(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2) of OS2Display"
       - task compose -- pull
       - task compose -- up --detach --remove-orphans --wait
       - echo "Create jwt key pair"
@@ -48,13 +67,80 @@ tasks:
       - task console -- app:update
       - task console -- app:tenant:add
       - task console -- app:user:add
+      - sleep 5
       - task console -- cache:clear
+      - echo "Install complete!"
+      - |
+        DOMAIN=$(grep ^COMPOSE_SERVER_DOMAIN= .env | cut -d '=' -f 2)
+        echo ""
+        echo "===================================================="
+        echo "OS2display is now available via the URLs below"
+        echo "===================================================="
+        echo "Admin: https://$DOMAIN/admin"
+        echo "Screen: https://$DOMAIN/client"
+        echo "===================================================="
+
+  uninstall:
+    desc: Uninstall OS2Display. Removes the database, all containers and volumes and the network. And the .env file. Use with caution!
+    cmds:
+      - |
+        echo "⚠️  WARNING: This will permanently remove:"
+        echo "   - All Docker containers"
+        echo "   - All Docker volumes (including the database)"
+        echo "   - The 'frontend' Docker network"
+        echo "   - The .env configuration file"
+        echo ""
+        echo "This action cannot be undone!"
+        echo ""
+        printf "Are you sure you want to continue? (yes/no): "
+        read CONFIRM
+        if [ "$CONFIRM" != "yes" ]; then
+          echo "Uninstall cancelled."
+          exit 1
+        fi
+      - task purge -- --volumes --network
+      - |
+        if [ -f .env ]; then
+          echo "Removing .env file"
+          rm .env
+        else
+          echo ".env file does not exist"
+        fi
+
+  upgrade:
+    desc: Upgrade OS2Display - stop containers, pull new images, start containers, and run app update
+    cmds:
+      - task: check:version
+      - echo "Stopping and removing containers..."
+      - task compose -- down
+      - echo "Upgrading to version $(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2)..."
+      - echo "Pulling new image versions..."
+      - task compose -- pull
+      - echo "Starting containers..."
+      - task compose -- up -d
+      - echo "Running application update..."
+      - task console -- app:update
+      - echo "Clearing cache..."
+      - task console -- cache:clear
+      - echo "Upgrade complete!"
 
   purge:
     desc: Remove all containers (use -- --volumes to also delete volumes, -- --network to remove the frontend network)
     cmds:
-      - task compose -- down --remove-orphans {{.CLI_ARGS}}
       - |
+        # Filter out --network flag before passing to docker compose
+        COMPOSE_ARGS=""
+        REMOVE_NETWORK=false
+        for arg in {{.CLI_ARGS}}; do
+          if [ "$arg" = "--network" ]; then
+            REMOVE_NETWORK=true
+          else
+            COMPOSE_ARGS="$COMPOSE_ARGS $arg"
+          fi
+        done
+        task compose -- down --remove-orphans $COMPOSE_ARGS
+      - |
+        # Check if --network flag was provided
         if echo "{{.CLI_ARGS}}" | grep -q -- '--network'; then
           if docker network ls --format '{{.Name}}' | grep -wq frontend; then
             echo "Removing external network 'frontend'"
@@ -110,10 +196,10 @@ tasks:
         echo "Opening $URL"
         xdg-open "$URL" 2>/dev/null || open "$URL" 2>/dev/null || echo "Could not open browser. Visit: $URL"
 
-  _env:build:
-    internal: true
+  env:build:
     desc: Build .env from .env.example by prompting for placeholder values
     cmds:
+
       - |
         INPUT=".env.example"
         OUTPUT=".env"
@@ -152,3 +238,61 @@ tasks:
 
         echo ""
         echo "$OUTPUT has been created."
+
+  check:version:
+    desc: Check if installer version matches OS2Display version
+    internal: true
+    cmds:
+      - |
+        # Check if installer version matches OS2Display version
+        if [ -f VERSION ]; then
+          INSTALLER_VERSION=$(cat VERSION)
+          IMAGE_VERSION=$(grep ^COMPOSE_IMAGE_VERSION= .env | cut -d '=' -f 2 | tr -d ' "')
+          
+          # Extract major.minor version (e.g., 3.0 from 3.0.0-beta1)
+          INSTALLER_MAIN=$(echo "$INSTALLER_VERSION" | cut -d '.' -f 1-2)
+          IMAGE_MAIN=$(echo "$IMAGE_VERSION" | cut -d '.' -f 1-2)
+          
+          if [ "$INSTALLER_MAIN" != "$IMAGE_MAIN" ]; then
+            echo ""
+            echo "⚠️  WARNING: Version mismatch detected!"
+            echo "   Installer version: $INSTALLER_VERSION"
+            echo "   OS2Display version: $IMAGE_VERSION"
+            echo ""
+            echo "   The .env.example file may not be compatible with the OS2Display"
+            echo "   version you are installing. We encourage you to download the"
+            echo "   installer version that matches your OS2Display version."
+            echo ""
+            printf "Do you want to continue anyway? (yes/no): "
+            read CONFIRM
+            if [ "$CONFIRM" != "yes" ]; then
+              echo "Operation cancelled."
+              exit 1
+            fi
+          fi
+        fi
+
+
+
+  check:certificates:
+    desc: Check if Traefik SSL certificates exist when Traefik is enabled
+    internal: true
+    cmds:
+      - |
+        # Check if Traefik is enabled and SSL certificates exist
+        COMPOSE_FILES=$(grep ^COMPOSE_FILES= .env | cut -d '=' -f 2 | tr -d ' "')
+        if echo "$COMPOSE_FILES" | grep -q "docker-compose.traefik.yml"; then
+          echo "You have choosen an internal Traefik setup. Checking for SSL certificates..."
+          if [ ! -f traefik/ssl/docker.crt ] || [ ! -f traefik/ssl/docker.key ]; then
+            echo ""
+            echo "⚠️  ERROR: Traefik SSL certificates not found!"
+            echo "   The COMPOSE_FILES variable includes docker-compose.traefik.yml,"
+            echo "   but the required SSL certificate files are missing:"
+            echo "   - traefik/ssl/docker.crt"
+            echo "   - traefik/ssl/docker.key"
+            echo ""
+            echo "Please create these files and then re-run install."
+            echo ""
+            exit 1
+          fi
+        fi
